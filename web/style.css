@@ -43,3 +43,11 @@ button:hover {
   display: flex;
   gap: 5px;
 }
+
+#timeline-container {
+  margin-top: 15px;
+  padding: 10px;
+  background-color: #fff;
+  border-radius: 5px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}

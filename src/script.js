@@ -7,12 +7,14 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
 let crashData = [];
 let markersLayer = L.layerGroup().addTo(map);
 let chart;
+let timelineChart;
 
 async function loadData() {
   const res = await fetch("data/crashes.json");
   crashData = await res.json();
   renderMarkers(crashData);
   updateAnalytics(crashData);
+  updateTimeline(crashData);
 }
 
 function renderMarkers(data) {
@@ -72,6 +74,55 @@ function updateAnalytics(data) {
   });
 }
 
+function updateTimeline(data) {
+  // Group data by year
+  const yearlyData = {};
+  data.forEach((d) => {
+    const year = d.Year;
+    yearlyData[year] = (yearlyData[year] || 0) + 1;
+  });
+
+  // Sort years
+  const sortedYears = Object.keys(yearlyData).sort((a, b) => a - b);
+  const counts = sortedYears.map(year => yearlyData[year]);
+  
+  // Create or update timeline chart
+  if (timelineChart) timelineChart.destroy();
+  timelineChart = new Chart(document.getElementById("timeline-chart"), {
+    type: 'line',
+    data: {
+      labels: sortedYears,
+      datasets: [{
+        label: 'Crashes per Year',
+        data: counts,
+        borderColor: 'rgb(75, 192, 192)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        tension: 0.1,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: {
+          beginAtZero: true,
+          title: {
+            display: true,
+            text: 'Number of Crashes'
+          }
+        },
+        x: {
+          title: {
+            display: true,
+            text: 'Year'
+          }
+        }
+      }
+    }
+  });
+}
+
 document.getElementById("applyFilter").addEventListener("click", () => {
   const minY = +document.getElementById("yearMin").value || 0;
   const maxY = +document.getElementById("yearMax").value || 9999;
@@ -90,6 +141,7 @@ document.getElementById("applyFilter").addEventListener("click", () => {
 
   renderMarkers(filtered);
   updateAnalytics(filtered);
+  updateTimeline(filtered);
 });
 
 loadData();
