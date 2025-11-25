@@ -1,11 +1,18 @@
 let map = L.map("map").setView([20, 0], 2);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 6,
+  maxZoom: 18,
   attribution: "&copy; OpenStreetMap contributors",
 }).addTo(map);
 
+// Create a marker cluster group
+let markers = L.markerClusterGroup({
+  spiderfyOnMaxZoom: true,
+  showCoverageOnHover: false,
+  zoomToBoundsOnClick: true,
+  maxClusterRadius: 80, // Maximum radius that a cluster will cover from the central marker
+});
+
 let crashData = [];
-let markersLayer = L.layerGroup().addTo(map);
 let chart;
 let timelineChart;
 
@@ -18,13 +25,30 @@ async function loadData() {
 }
 
 function renderMarkers(data) {
-  markersLayer.clearLayers();
+  // Clear existing markers
+  markers.clearLayers();
+  
+  // Create markers for each crash
   data.forEach((crash) => {
     if (crash.Latitude && crash.Longitude) {
+      // Create a circle marker with color based on fatalities
+      const fatalityCount = crash.Fatalities || 0;
+      let color = "green"; // Default color for low fatalities
+      
+      if (fatalityCount > 50) {
+        color = "red";
+      } else if (fatalityCount > 10) {
+        color = "orange";
+      } else if (fatalityCount > 0) {
+        color = "yellow";
+      }
+      
       const marker = L.circleMarker([crash.Latitude, crash.Longitude], {
-        radius: 5,
-        fillColor: "red",
-        color: "#f03",
+        radius: Math.max(5, Math.min(15, fatalityCount / 10)), // Size based on fatalities
+        fillColor: color,
+        color: "#000",
+        weight: 1,
+        opacity: 1,
         fillOpacity: 0.7,
       }).bindPopup(`
         <b>${crash.Location}</b><br>
@@ -33,9 +57,13 @@ function renderMarkers(data) {
         Fatalities: ${crash.Fatalities}<br>
         Country: ${crash.Country}
       `);
-      markersLayer.addLayer(marker);
+      
+      markers.addLayer(marker);
     }
   });
+  
+  // Add the marker cluster group to the map
+  map.addLayer(markers);
 }
 
 function updateAnalytics(data) {
@@ -70,60 +98,16 @@ function updateAnalytics(data) {
         },
       ],
     },
-    options: { scales: { y: { beginAtZero: true } } },
-  });
-}
-
-function updateTimeline(data) {
-  // Group data by year
-  const yearlyData = {};
-  data.forEach((d) => {
-    const year = d.Year;
-    yearlyData[year] = (yearlyData[year] || 0) + 1;
-  });
-
-  // Sort years
-  const sortedYears = Object.keys(yearlyData).sort((a, b) => a - b);
-  const counts = sortedYears.map(year => yearlyData[year]);
-  
-  // Create or update timeline chart
-  if (timelineChart) timelineChart.destroy();
-  timelineChart = new Chart(document.getElementById("timeline-chart"), {
-    type: 'line',
-    data: {
-      labels: sortedYears,
-      datasets: [{
-        label: 'Crashes per Year',
-        data: counts,
-        borderColor: 'rgb(75, 192, 192)',
-        backgroundColor: 'rgba(75, 192, 192, 0.2)',
-        tension: 0.1,
-        fill: true
-      }]
-    },
-    options: {
+    options: { 
+      scales: { y: { beginAtZero: true } },
       responsive: true,
-      maintainAspectRatio: false,
-      scales: {
-        y: {
-          beginAtZero: true,
-          title: {
-            display: true,
-            text: 'Number of Crashes'
-          }
-        },
-        x: {
-          title: {
-            display: true,
-            text: 'Year'
-          }
-        }
-      }
-    }
+      maintainAspectRatio: false
+    },
   });
 }
 
-document.getElementById("applyFilter").addEventListener("click", () => {
+// Apply filter function
+function applyFilters() {
   const minY = +document.getElementById("yearMin").value || 0;
   const maxY = +document.getElementById("yearMax").value || 9999;
   const type = document.getElementById("typeFilter").value;
@@ -141,7 +125,23 @@ document.getElementById("applyFilter").addEventListener("click", () => {
 
   renderMarkers(filtered);
   updateAnalytics(filtered);
-  updateTimeline(filtered);
-});
+}
 
+// Reset filter function
+function resetFilters() {
+  document.getElementById("yearMin").value = "";
+  document.getElementById("yearMax").value = "";
+  document.getElementById("typeFilter").value = "All";
+  document.getElementById("regionFilter").value = "";
+  document.getElementById("fatalFilter").value = "";
+  
+  renderMarkers(crashData);
+  updateAnalytics(crashData);
+}
+
+// Event listeners
+document.getElementById("applyFilter").addEventListener("click", applyFilters);
+document.getElementById("resetFilter").addEventListener("click", resetFilters);
+
+// Load data when page loads
 loadData();
