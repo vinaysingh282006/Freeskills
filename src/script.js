@@ -1,33 +1,54 @@
 let map = L.map("map").setView([20, 0], 2);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 6,
+  maxZoom: 18,
   attribution: "&copy; OpenStreetMap contributors",
 }).addTo(map);
 
-// Weather API configuration (using OpenWeatherMap as an example)
-const WEATHER_API_KEY = "YOUR_API_KEY"; // This should be replaced with an actual API key
-const WEATHER_API_URL = "https://api.openweathermap.org/data/2.5/weather";
+// Create a marker cluster group
+let markers = L.markerClusterGroup({
+  spiderfyOnMaxZoom: true,
+  showCoverageOnHover: false,
+  zoomToBoundsOnClick: true,
+  maxClusterRadius: 80, // Maximum radius that a cluster will cover from the central marker
+});
 
 let crashData = [];
-let markersLayer = L.layerGroup().addTo(map);
 let chart;
+let timelineChart;
 
 async function loadData() {
   const res = await fetch("data/crashes.json");
   crashData = await res.json();
   renderMarkers(crashData);
   updateAnalytics(crashData);
+  updateTimeline(crashData);
 }
 
 function renderMarkers(data) {
-  markersLayer.clearLayers();
+  // Clear existing markers
+  markers.clearLayers();
+  
+  // Create markers for each crash
   data.forEach((crash) => {
     if (crash.Latitude && crash.Longitude) {
-      // Create marker with enhanced popup including weather information
+      // Create a circle marker with color based on fatalities
+      const fatalityCount = crash.Fatalities || 0;
+      let color = "green"; // Default color for low fatalities
+      
+      if (fatalityCount > 50) {
+        color = "red";
+      } else if (fatalityCount > 10) {
+        color = "orange";
+      } else if (fatalityCount > 0) {
+        color = "yellow";
+      }
+      
       const marker = L.circleMarker([crash.Latitude, crash.Longitude], {
-        radius: 5,
-        fillColor: "red",
-        color: "#f03",
+        radius: Math.max(5, Math.min(15, fatalityCount / 10)), // Size based on fatalities
+        fillColor: color,
+        color: "#000",
+        weight: 1,
+        opacity: 1,
         fillOpacity: 0.7,
       }).bindPopup(`
         <b>${crash.Location}</b><br>
@@ -38,9 +59,13 @@ function renderMarkers(data) {
         <div id="weather-info-${crash.Year}-${crash.Location.replace(/\s+/g, '-')}">Loading weather data...</div>
         <button onclick="fetchWeatherData(${crash.Latitude}, ${crash.Longitude}, '${crash.Year}', '${crash.Location.replace(/\s+/g, '-')}')">Load Weather</button>
       `);
-      markersLayer.addLayer(marker);
+      
+      markers.addLayer(marker);
     }
   });
+  
+  // Add the marker cluster group to the map
+  map.addLayer(markers);
 }
 
 // Function to fetch weather data for a specific location and time
@@ -107,11 +132,16 @@ function updateAnalytics(data) {
         },
       ],
     },
-    options: { scales: { y: { beginAtZero: true } } },
+    options: { 
+      scales: { y: { beginAtZero: true } },
+      responsive: true,
+      maintainAspectRatio: false
+    },
   });
 }
 
-document.getElementById("applyFilter").addEventListener("click", () => {
+// Apply filter function
+function applyFilters() {
   const minY = +document.getElementById("yearMin").value || 0;
   const maxY = +document.getElementById("yearMax").value || 9999;
   const type = document.getElementById("typeFilter").value;
@@ -138,6 +168,23 @@ document.getElementById("applyFilter").addEventListener("click", () => {
 
   renderMarkers(filtered);
   updateAnalytics(filtered);
-});
+}
 
+// Reset filter function
+function resetFilters() {
+  document.getElementById("yearMin").value = "";
+  document.getElementById("yearMax").value = "";
+  document.getElementById("typeFilter").value = "All";
+  document.getElementById("regionFilter").value = "";
+  document.getElementById("fatalFilter").value = "";
+  
+  renderMarkers(crashData);
+  updateAnalytics(crashData);
+}
+
+// Event listeners
+document.getElementById("applyFilter").addEventListener("click", applyFilters);
+document.getElementById("resetFilter").addEventListener("click", resetFilters);
+
+// Load data when page loads
 loadData();

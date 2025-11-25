@@ -9,6 +9,15 @@
       rel="stylesheet"
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
     />
+    <!-- Add Leaflet.markercluster CSS -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"
+    />
   </head>
   <body>
     <div id="sidebar">
@@ -56,6 +65,7 @@
       <input type="number" id="visibilityFilter" placeholder="Max visibility" />
 
       <button id="applyFilter">Apply Filters</button>
+      <button id="resetFilter">Reset Filters</button>
 
       <hr />
 
@@ -67,11 +77,20 @@
       </div>
 
       <canvas id="chart" width="200" height="200"></canvas>
+      
+      <hr />
+      
+      <h3>Timeline</h3>
+      <div id="timeline-container">
+        <canvas id="timeline-chart" width="200" height="150"></canvas>
+      </div>
     </div>
 
     <div id="map"></div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Add Leaflet.markercluster JS -->
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="src/script.js"></script>
   </body>
