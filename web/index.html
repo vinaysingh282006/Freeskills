@@ -22,6 +22,16 @@
   <body>
     <div id="sidebar">
       <h2>Crash Filters</h2>
+      
+      <!-- Search Section -->
+      <label>Search Crashes</label>
+      <div class="search-container">
+        <input type="text" id="searchInput" placeholder="Search by location, country, or type..." />
+        <button id="searchButton">Search</button>
+        <button id="clearSearchButton" style="background-color: #6c757d; margin-top: 5px;">Clear</button>
+      </div>
+      <div id="searchResults" class="search-results"></div>
+      <hr />
 
       <label>Year Range</label>
       <div class="row">

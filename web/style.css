@@ -60,6 +60,16 @@ button:hover {
   width: calc(50% - 2.5px);
 }
 
+#searchInput {
+  width: 100%;
+  margin-bottom: 5px;
+}
+
+#searchButton, #clearSearchButton {
+  width: 100%;
+  margin-bottom: 5px;
+}
+
 h2 {
   color: #333;
   margin-top: 0;
@@ -105,4 +115,42 @@ canvas {
 
 #operator-container {
   margin-top: 15px;
+}
+
+/* Search Styles */
+.search-container {
+  margin-bottom: 15px;
+}
+
+.search-container input {
+  margin-bottom: 5px;
+}
+
+.search-results {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 10px;
+  margin-top: 10px;
+  display: none;
+}
+
+.search-result-item {
+  padding: 8px;
+  border-bottom: 1px solid #f0f0f0;
+  cursor: pointer;
+}
+
+.search-result-item:hover {
+  background-color: #f8f9fa;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.highlighted-marker {
+  border: 3px solid #ffeb3b !important;
+  box-shadow: 0 0 10px #ffeb3b !important;
 }
