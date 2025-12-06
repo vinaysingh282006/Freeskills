@@ -392,18 +392,588 @@ function resetFilters() {
 }
 
 /**
- * 🎯 Future enhancement placeholder function
+ * 📤 Export data to various formats
+ * @param {Array} data - Array of crash data objects to export
+ * @param {string} format - Export format ('csv', 'json', 'image')
+ * @param {string} filename - Name of the file to export
  */
+function exportData(data = crashData, format = 'csv', filename = 'flight_crash_data') {
+  switch (format) {
+    case 'csv':
+      exportToCSV(data, filename);
+      break;
+    case 'json':
+      exportToJSON(data, filename);
+      break;
+    case 'image':
+      exportChartsAsImage(filename);
+      break;
+    default:
+      console.error('Unsupported export format:', format);
+  }
+}
+
+/**
+ * Export data to CSV format
+ * @param {Array} data - Array of crash data objects to export
+ * @param {string} filename - Name of the file to export
+ */
+function exportToCSV(data, filename) {
+  if (!data || data.length === 0) {
+    alert('No data to export');
+    return;
+  }
+
+  // Create CSV header
+  const headers = ['Location', 'Year', 'Type', 'Fatalities', 'Country', 'Latitude', 'Longitude'];
+  let csvContent = headers.join(',') + '\n';
+
+  // Add data rows
+  data.forEach(item => {
+    const row = [
+      `"${item.Location || ''}"`,
+      item.Year || '',
+      `"${item.Type || ''}"`,
+      item.Fatalities || 0,
+      `"${item.Country || ''}"`,
+      item.Latitude || '',
+      item.Longitude || ''
+    ];
+    csvContent += row.join(',') + '\n';
+  });
+
+  // Create download link
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${filename}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/**
+ * Export data to JSON format
+ * @param {Array} data - Array of crash data objects to export
+ * @param {string} filename - Name of the file to export
+ */
+function exportToJSON(data, filename) {
+  if (!data || data.length === 0) {
+    alert('No data to export');
+    return;
+  }
+
+  // Create JSON content
+  const jsonContent = JSON.stringify(data, null, 2);
+
+  // Create download link
+  const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${filename}.json`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/**
+ * Export charts as images
+ * @param {string} filename - Name of the file to export
+ */
+function exportChartsAsImage(filename) {
+  // Create a container for all charts
+  const container = document.createElement('div');
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.gap = '20px';
+  container.style.padding = '20px';
+  container.style.backgroundColor = 'white';
+  
+  // Clone and add each chart
+  const charts = [
+    document.getElementById('chart'),
+    document.getElementById('timeline-chart'),
+    document.getElementById('operator-chart')
+  ];
+  
+  charts.forEach(chartElement => {
+    if (chartElement) {
+      const clone = chartElement.cloneNode(true);
+      clone.style.maxWidth = '800px';
+      clone.style.height = 'auto';
+      container.appendChild(clone);
+    }
+  });
+  
+  // Add title
+  const title = document.createElement('h2');
+  title.textContent = 'Flight Crash Data Analysis';
+  title.style.textAlign = 'center';
+  container.insertBefore(title, container.firstChild);
+  
+  // Add timestamp
+  const timestamp = document.createElement('p');
+  timestamp.textContent = `Exported on: ${new Date().toLocaleString()}`;
+  timestamp.style.textAlign = 'center';
+  timestamp.style.fontStyle = 'italic';
+  container.appendChild(timestamp);
+  
+  // Render to canvas and download
+  html2canvas(container).then(canvas => {
+    const link = document.createElement('a');
+    link.download = `${filename}_charts.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+}
+
+// 📡 Event listeners for filter buttons
+document.getElementById("applyFilter").addEventListener("click", applyFilters);
+document.getElementById("resetFilter").addEventListener("click", resetFilters);
+// Add event listener for export button
+document.getElementById("exportData").addEventListener("click", function() {
+  // Get current filter values
+  const minY = +document.getElementById("yearMin").value || 0;
+  const maxY = +document.getElementById("yearMax").value || 9999;
+  const type = document.getElementById("typeFilter").value;
+  const region = document.getElementById("regionFilter").value.toLowerCase();
+  const minF = +document.getElementById("fatalFilter").value || 0;
+  
+  // Filter data based on current filters
+  const filteredData = crashData.filter(
+    (c) =>
+      c.Year >= minY &&
+      c.Year <= maxY &&
+      (type === "All" || c.Type === type) &&
+      (!region || (c.Country && c.Country.toLowerCase().includes(region))) &&
+      (c.Fatalities || 0) >= minF
+  );
+  
+  // Show export options dialog
+  showExportDialog(filteredData);
+});
+
+/**
+ * Show export options dialog
+ * @param {Array} data - Data to export
+ */
+function showExportDialog(data) {
+  // Create modal dialog
+  const modal = document.createElement('div');
+  modal.style.position = 'fixed';
+  modal.style.top = '0';
+  modal.style.left = '0';
+  modal.style.width = '100%';
+  modal.style.height = '100%';
+  modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+  modal.style.display = 'flex';
+  modal.style.justifyContent = 'center';
+  modal.style.alignItems = 'center';
+  modal.style.zIndex = '1000';
+  
+  // Create dialog content
+  const dialog = document.createElement('div');
+  dialog.style.backgroundColor = 'white';
+  dialog.style.padding = '20px';
+  dialog.style.borderRadius = '8px';
+  dialog.style.width = '400px';
+  dialog.style.maxWidth = '90%';
+  
+  // Add title
+  const title = document.createElement('h3');
+  title.textContent = 'Export Data';
+  title.style.marginTop = '0';
+  dialog.appendChild(title);
+  
+  // Add data info
+  const info = document.createElement('p');
+  info.textContent = `Exporting ${data.length} crash records`;
+  dialog.appendChild(info);
+  
+  // Add export format options
+  const formatLabel = document.createElement('label');
+  formatLabel.textContent = 'Select export format:';
+  formatLabel.style.display = 'block';
+  formatLabel.style.marginBottom = '10px';
+  formatLabel.style.fontWeight = 'bold';
+  dialog.appendChild(formatLabel);
+  
+  // Create radio buttons for format selection
+  const formats = [
+    { id: 'csv', label: 'CSV (Spreadsheet)', checked: true },
+    { id: 'json', label: 'JSON (Raw Data)' },
+    { id: 'image', label: 'PNG (Charts Image)' }
+  ];
+  
+  let selectedFormat = 'csv';
+  
+  formats.forEach(format => {
+    const container = document.createElement('div');
+    container.style.marginBottom = '8px';
+    
+    const radio = document.createElement('input');
+    radio.type = 'radio';
+    radio.id = `format-${format.id}`;
+    radio.name = 'export-format';
+    radio.value = format.id;
+    radio.checked = format.checked || false;
+    if (format.checked) selectedFormat = format.id;
+    
+    radio.addEventListener('change', function() {
+      selectedFormat = this.value;
+    });
+    
+    const label = document.createElement('label');
+    label.htmlFor = `format-${format.id}`;
+    label.textContent = format.label;
+    label.style.marginLeft = '8px';
+    
+    container.appendChild(radio);
+    container.appendChild(label);
+    dialog.appendChild(container);
+  });
+  
+  // Add filename input
+  const filenameLabel = document.createElement('label');
+  filenameLabel.textContent = 'Filename (without extension):';
+  filenameLabel.style.display = 'block';
+  filenameLabel.style.marginTop = '15px';
+  filenameLabel.style.fontWeight = 'bold';
+  dialog.appendChild(filenameLabel);
+  
+  const filenameInput = document.createElement('input');
+  filenameInput.type = 'text';
+  filenameInput.id = 'export-filename';
+  filenameInput.value = 'flight_crash_data_' + new Date().toISOString().slice(0, 10);
+  filenameInput.style.width = '100%';
+  filenameInput.style.padding = '8px';
+  filenameInput.style.marginTop = '5px';
+  filenameInput.style.marginBottom = '15px';
+  dialog.appendChild(filenameInput);
+  
+  // Add buttons
+  const buttonContainer = document.createElement('div');
+  buttonContainer.style.display = 'flex';
+  buttonContainer.style.gap = '10px';
+  buttonContainer.style.justifyContent = 'flex-end';
+  
+  const exportButton = document.createElement('button');
+  exportButton.textContent = 'Export';
+  exportButton.style.backgroundColor = '#28a745';
+  exportButton.addEventListener('click', function() {
+    const filename = filenameInput.value || 'flight_crash_data';
+    exportData(data, selectedFormat, filename);
+    document.body.removeChild(modal);
+  });
+  
+  const cancelButton = document.createElement('button');
+  cancelButton.textContent = 'Cancel';
+  cancelButton.style.backgroundColor = '#6c757d';
+  cancelButton.addEventListener('click', function() {
+    document.body.removeChild(modal);
+  });
+  
+  buttonContainer.appendChild(cancelButton);
+  buttonContainer.appendChild(exportButton);
+  dialog.appendChild(buttonContainer);
+  
+  // Close modal when clicking outside
+  modal.addEventListener('click', function(event) {
+    if (event.target === modal) {
+      document.body.removeChild(modal);
+    }
+  });
+  
+  // Add dialog to modal and modal to body
+  modal.appendChild(dialog);
+  document.body.appendChild(modal);
+}
+
+// 🎯 Future enhancement placeholder function
 function futureEnhancement() {
   // Reserved for future functionality
   // Will implement advanced filtering options
 }
 
 /**
- * 📡 Event listeners for filter buttons
+ * 📤 Export data to various formats
+ * @param {Array} data - Array of crash data objects to export
+ * @param {string} format - Export format ('csv', 'json', 'image')
+ * @param {string} filename - Name of the file to export
  */
-document.getElementById("applyFilter").addEventListener("click", applyFilters);
-document.getElementById("resetFilter").addEventListener("click", resetFilters);
+function exportData(data = crashData, format = 'csv', filename = 'flight_crash_data') {
+  switch (format) {
+    case 'csv':
+      exportToCSV(data, filename);
+      break;
+    case 'json':
+      exportToJSON(data, filename);
+      break;
+    case 'image':
+      exportChartsAsImage(filename);
+      break;
+    default:
+      console.error('Unsupported export format:', format);
+  }
+}
+
+/**
+ * Export data to CSV format
+ * @param {Array} data - Array of crash data objects to export
+ * @param {string} filename - Name of the file to export
+ */
+function exportToCSV(data, filename) {
+  if (!data || data.length === 0) {
+    alert('No data to export');
+    return;
+  }
+
+  // Create CSV header
+  const headers = ['Location', 'Year', 'Type', 'Fatalities', 'Country', 'Latitude', 'Longitude'];
+  let csvContent = headers.join(',') + '\n';
+
+  // Add data rows
+  data.forEach(item => {
+    const row = [
+      `"${item.Location || ''}"`,
+      item.Year || '',
+      `"${item.Type || ''}"`,
+      item.Fatalities || 0,
+      `"${item.Country || ''}"`,
+      item.Latitude || '',
+      item.Longitude || ''
+    ];
+    csvContent += row.join(',') + '\n';
+  });
+
+  // Create download link
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${filename}.csv`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/**
+ * Export data to JSON format
+ * @param {Array} data - Array of crash data objects to export
+ * @param {string} filename - Name of the file to export
+ */
+function exportToJSON(data, filename) {
+  if (!data || data.length === 0) {
+    alert('No data to export');
+    return;
+  }
+
+  // Create JSON content
+  const jsonContent = JSON.stringify(data, null, 2);
+
+  // Create download link
+  const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.setAttribute('href', url);
+  link.setAttribute('download', `${filename}.json`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+/**
+ * Export charts as images
+ * @param {string} filename - Name of the file to export
+ */
+function exportChartsAsImage(filename) {
+  // Create a container for all charts
+  const container = document.createElement('div');
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.gap = '20px';
+  container.style.padding = '20px';
+  container.style.backgroundColor = 'white';
+  
+  // Clone and add each chart
+  const charts = [
+    document.getElementById('chart'),
+    document.getElementById('timeline-chart'),
+    document.getElementById('operator-chart')
+  ];
+  
+  charts.forEach(chartElement => {
+    if (chartElement) {
+      const clone = chartElement.cloneNode(true);
+      clone.style.maxWidth = '800px';
+      clone.style.height = 'auto';
+      container.appendChild(clone);
+    }
+  });
+  
+  // Add title
+  const title = document.createElement('h2');
+  title.textContent = 'Flight Crash Data Analysis';
+  title.style.textAlign = 'center';
+  container.insertBefore(title, container.firstChild);
+  
+  // Add timestamp
+  const timestamp = document.createElement('p');
+  timestamp.textContent = `Exported on: ${new Date().toLocaleString()}`;
+  timestamp.style.textAlign = 'center';
+  timestamp.style.fontStyle = 'italic';
+  container.appendChild(timestamp);
+  
+  // Render to canvas and download
+  html2canvas(container).then(canvas => {
+    const link = document.createElement('a');
+    link.download = `${filename}_charts.png`;
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+  });
+}
+
+/**
+ * Show export options dialog
+ * @param {Array} data - Data to export
+ */
+function showExportDialog(data) {
+  // Create modal dialog
+  const modal = document.createElement('div');
+  modal.style.position = 'fixed';
+  modal.style.top = '0';
+  modal.style.left = '0';
+  modal.style.width = '100%';
+  modal.style.height = '100%';
+  modal.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
+  modal.style.display = 'flex';
+  modal.style.justifyContent = 'center';
+  modal.style.alignItems = 'center';
+  modal.style.zIndex = '1000';
+  
+  // Create dialog content
+  const dialog = document.createElement('div');
+  dialog.style.backgroundColor = 'white';
+  dialog.style.padding = '20px';
+  dialog.style.borderRadius = '8px';
+  dialog.style.width = '400px';
+  dialog.style.maxWidth = '90%';
+  
+  // Add title
+  const title = document.createElement('h3');
+  title.textContent = 'Export Data';
+  title.style.marginTop = '0';
+  dialog.appendChild(title);
+  
+  // Add data info
+  const info = document.createElement('p');
+  info.textContent = `Exporting ${data.length} crash records`;
+  dialog.appendChild(info);
+  
+  // Add export format options
+  const formatLabel = document.createElement('label');
+  formatLabel.textContent = 'Select export format:';
+  formatLabel.style.display = 'block';
+  formatLabel.style.marginBottom = '10px';
+  formatLabel.style.fontWeight = 'bold';
+  dialog.appendChild(formatLabel);
+  
+  // Create radio buttons for format selection
+  const formats = [
+    { id: 'csv', label: 'CSV (Spreadsheet)', checked: true },
+    { id: 'json', label: 'JSON (Raw Data)' },
+    { id: 'image', label: 'PNG (Charts Image)' }
+  ];
+  
+  let selectedFormat = 'csv';
+  
+  formats.forEach(format => {
+    const container = document.createElement('div');
+    container.style.marginBottom = '8px';
+    
+    const radio = document.createElement('input');
+    radio.type = 'radio';
+    radio.id = `format-${format.id}`;
+    radio.name = 'export-format';
+    radio.value = format.id;
+    radio.checked = format.checked || false;
+    if (format.checked) selectedFormat = format.id;
+    
+    radio.addEventListener('change', function() {
+      selectedFormat = this.value;
+    });
+    
+    const label = document.createElement('label');
+    label.htmlFor = `format-${format.id}`;
+    label.textContent = format.label;
+    label.style.marginLeft = '8px';
+    
+    container.appendChild(radio);
+    container.appendChild(label);
+    dialog.appendChild(container);
+  });
+  
+  // Add filename input
+  const filenameLabel = document.createElement('label');
+  filenameLabel.textContent = 'Filename (without extension):';
+  filenameLabel.style.display = 'block';
+  filenameLabel.style.marginTop = '15px';
+  filenameLabel.style.fontWeight = 'bold';
+  dialog.appendChild(filenameLabel);
+  
+  const filenameInput = document.createElement('input');
+  filenameInput.type = 'text';
+  filenameInput.id = 'export-filename';
+  filenameInput.value = 'flight_crash_data_' + new Date().toISOString().slice(0, 10);
+  filenameInput.style.width = '100%';
+  filenameInput.style.padding = '8px';
+  filenameInput.style.marginTop = '5px';
+  filenameInput.style.marginBottom = '15px';
+  dialog.appendChild(filenameInput);
+  
+  // Add buttons
+  const buttonContainer = document.createElement('div');
+  buttonContainer.style.display = 'flex';
+  buttonContainer.style.gap = '10px';
+  buttonContainer.style.justifyContent = 'flex-end';
+  
+  const exportButton = document.createElement('button');
+  exportButton.textContent = 'Export';
+  exportButton.style.backgroundColor = '#28a745';
+  exportButton.addEventListener('click', function() {
+    const filename = filenameInput.value || 'flight_crash_data';
+    exportData(data, selectedFormat, filename);
+    document.body.removeChild(modal);
+  });
+  
+  const cancelButton = document.createElement('button');
+  cancelButton.textContent = 'Cancel';
+  cancelButton.style.backgroundColor = '#6c757d';
+  cancelButton.addEventListener('click', function() {
+    document.body.removeChild(modal);
+  });
+  
+  buttonContainer.appendChild(cancelButton);
+  buttonContainer.appendChild(exportButton);
+  dialog.appendChild(buttonContainer);
+  
+  // Close modal when clicking outside
+  modal.addEventListener('click', function(event) {
+    if (event.target === modal) {
+      document.body.removeChild(modal);
+    }
+  });
+  
+  // Add dialog to modal and modal to body
+  modal.appendChild(dialog);
+  document.body.appendChild(modal);
+}
 
 /**
  * Show map view function
