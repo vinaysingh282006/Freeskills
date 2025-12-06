@@ -7,10 +7,6 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "&copy; OpenStreetMap contributors",
 }).addTo(map);
 
-// Weather API configuration - using OpenWeatherMap as an example
-const WEATHER_API_URL = "https://api.openweathermap.org/data/2.5/weather";
-const WEATHER_API_KEY = "YOUR_API_KEY_HERE"; // Replace with actual API key
-
 // Create a marker cluster group
 let markers = L.markerClusterGroup({
   spiderfyOnMaxZoom: true,
@@ -19,8 +15,11 @@ let markers = L.markerClusterGroup({
   maxClusterRadius: 80, // Maximum radius that a cluster will cover from the central marker
 });
 
+// Store references to markers for easier access
+let markerRefs = {};
+
 // Weather API configuration (using OpenWeatherMap as an example)
-const WEATHER_API_KEY = "YOUR_API_KEY"; // This should be replaced with an actual API key
+const WEATHER_API_KEY = "YOUR_API_KEY_HERE"; // This should be replaced with an actual API key
 const WEATHER_API_URL = "https://api.openweathermap.org/data/2.5/weather";
 
 let crashData = [];
@@ -68,6 +67,9 @@ function renderMarkers(data) {
       // Calculate marker size based on fatalities (min 5, max 15)
       const markerSize = Math.max(5, Math.min(15, fatalityCount / 10));
       
+      // Create a unique key for this crash
+      const crashKey = `${crash.Location}-${crash.Year}`;
+      
       // Create circle marker with visual properties based on fatalities
       const marker = L.circleMarker([crash.Latitude, crash.Longitude], {
         radius: markerSize,
@@ -85,6 +87,9 @@ function renderMarkers(data) {
         <div id="weather-info-${crash.Year}-${crash.Location.replace(/\s+/g, '-')}">Loading weather data...</div>
         <button onclick="fetchWeatherData(${crash.Latitude}, ${crash.Longitude}, '${crash.Year}', '${crash.Location.replace(/\s+/g, '-')}')">Load Weather</button>
       `);
+      
+      // Store reference to marker
+      markerRefs[crashKey] = marker;
       
       markers.addLayer(marker);
     }
@@ -425,9 +430,150 @@ function futureEnhancement() {
   // Will implement advanced filtering options
 }
 
+/**
+ * Search crashes based on query text
+ * @param {string} query - Search query
+ */
+function searchCrashes(query) {
+  if (!query || query.trim() === '') {
+    clearSearchResults();
+    return;
+  }
+  
+  query = query.toLowerCase().trim();
+  
+  // Filter crashes based on query
+  const results = crashData.filter(crash => 
+    (crash.Location && crash.Location.toLowerCase().includes(query)) ||
+    (crash.Country && crash.Country.toLowerCase().includes(query)) ||
+    (crash.Type && crash.Type.toLowerCase().includes(query))
+  );
+  
+  displaySearchResults(results);
+  highlightMatchingMarkers(results);
+}
+
+/**
+ * Display search results in the sidebar
+ * @param {Array} results - Array of crash objects
+ */
+function displaySearchResults(results) {
+  const resultsContainer = document.getElementById('searchResults');
+  
+  if (results.length === 0) {
+    resultsContainer.innerHTML = '<p>No results found.</p>';
+    resultsContainer.style.display = 'block';
+    return;
+  }
+  
+  let html = `<p>Found ${results.length} result(s):</p>`;
+  
+  results.forEach((crash, index) => {
+    html += `
+      <div class="search-result-item" data-index="${index}" onclick="jumpToCrash(${JSON.stringify(crash).replace(/"/g, '&quot;')})">
+        <strong>${crash.Location}</strong> (${crash.Year})<br>
+        <small>${crash.Type} - ${crash.Fatalities} fatalities</small>
+      </div>`;
+  });
+  
+  resultsContainer.innerHTML = html;
+  resultsContainer.style.display = 'block';
+}
+
+/**
+ * Highlight matching markers on the map
+ * @param {Array} results - Array of crash objects
+ */
+function highlightMatchingMarkers(results) {
+  // Clear previous highlights
+  clearMarkerHighlights();
+  
+  // Highlight matching markers
+  results.forEach(crash => {
+    const crashKey = `${crash.Location}-${crash.Year}`;
+    const marker = markerRefs[crashKey];
+    
+    if (marker) {
+      // Temporarily increase the size and change color to highlight
+      marker.setStyle({
+        radius: marker.options.radius + 3,
+        color: '#ffeb3b',
+        weight: 3
+      });
+      
+      // Store original style for later restoration
+      marker.originalStyle = {
+        radius: marker.options.radius - 3,
+        color: marker.options.color,
+        weight: marker.options.weight
+      };
+    }
+  });
+}
+
+/**
+ * Clear marker highlights
+ */
+function clearMarkerHighlights() {
+  // Restore original style for all markers
+  Object.values(markerRefs).forEach(marker => {
+    if (marker.originalStyle) {
+      marker.setStyle(marker.originalStyle);
+      delete marker.originalStyle;
+    }
+  });
+}
+
+/**
+ * Jump to a specific crash location on the map
+ * @param {Object} crash - Crash object
+ */
+function jumpToCrash(crash) {
+  if (crash.Latitude && crash.Longitude) {
+    map.setView([crash.Latitude, crash.Longitude], 10);
+    
+    // Find and open the popup for this marker
+    const crashKey = `${crash.Location}-${crash.Year}`;
+    const marker = markerRefs[crashKey];
+    
+    if (marker) {
+      // Close any open popups first
+      map.closePopup();
+      
+      // Open popup for this marker after a short delay to ensure map is positioned
+      setTimeout(() => {
+        marker.openPopup();
+      }, 500);
+    }
+  }
+}
+
+/**
+ * Clear search results
+ */
+function clearSearchResults() {
+  document.getElementById('searchResults').style.display = 'none';
+  document.getElementById('searchInput').value = '';
+  clearMarkerHighlights();
+}
+
 // 📡 Event listeners for filter buttons
 document.getElementById("applyFilter").addEventListener("click", applyFilters);
 document.getElementById("resetFilter").addEventListener("click", resetFilters);
+
+// Add event listeners for search functionality
+document.getElementById('searchButton').addEventListener('click', function() {
+  const query = document.getElementById('searchInput').value;
+  searchCrashes(query);
+});
+
+document.getElementById('clearSearchButton').addEventListener('click', clearSearchResults);
+
+document.getElementById('searchInput').addEventListener('keyup', function(event) {
+  if (event.key === 'Enter') {
+    searchCrashes(this.value);
+  }
+});
 
 // 🚀 Initialize the application when page loads
 loadData();
