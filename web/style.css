@@ -60,6 +60,11 @@ button:hover {
   width: calc(50% - 2.5px);
 }
 
+#detail-location, #detail-year, #detail-type, #detail-fatalities, #detail-country, #detail-coordinates {
+  font-weight: 600;
+  color: #007bff;
+}
+
 h2 {
   color: #333;
   margin-top: 0;
@@ -105,4 +110,95 @@ canvas {
 
 #operator-container {
   margin-top: 15px;
+}
+
+/* Details Panel Styles */
+.details-panel {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  width: 350px;
+  max-height: 80vh;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  display: none;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: #007bff;
+  color: white;
+}
+
+.panel-header h3 {
+  margin: 0;
+  font-size: 1.2em;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 1.5em;
+  cursor: pointer;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+}
+
+.panel-content {
+  padding: 15px;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+
+.panel-content h4 {
+  margin-top: 20px;
+  margin-bottom: 10px;
+  color: #333;
+  border-bottom: 1px solid #eee;
+  padding-bottom: 5px;
+}
+
+.panel-content p {
+  margin: 8px 0;
+}
+
+.secondary-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  margin-top: 10px;
+}
+
+.secondary-btn:hover {
+  background-color: #5a6268;
+}
+
+#related-crashes {
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  padding: 10px;
+  margin-top: 10px;
 }

@@ -94,6 +94,27 @@
     </div>
 
     <div id="map"></div>
+    
+    <!-- Detailed Crash Information Panel -->
+    <div id="details-panel" class="details-panel">
+      <div class="panel-header">
+        <h3>Crash Details</h3>
+        <button id="close-details" class="close-btn">×</button>
+      </div>
+      <div classount">0</span></p>
+        <p><strong>Country:</strong> <span id="detail-country">-</span></p>
+        <p><strong>Coordinates:</strong> <span id="detail-coordinates">-</span></p>
+        
+        <h4>Additional Information</h4>
+        <p><strong>Weather Conditions:</strong> <span id="detail-weather">Not loaded</span></p>
+        <button id="load-weather-detail" class="secondary-btn">Load Weather Data</button>
+        
+        <h4>Related Crashes</h4>
+        <div id="related-crashes">
+          <p>No related crashes found.</p>
+        </div>
+      </div>
+    </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Add Leaflet.markercluster JS -->

@@ -7,10 +7,6 @@ L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
   attribution: "&copy; OpenStreetMap contributors",
 }).addTo(map);
 
-// Weather API configuration - using OpenWeatherMap as an example
-const WEATHER_API_URL = "https://api.openweathermap.org/data/2.5/weather";
-const WEATHER_API_KEY = "YOUR_API_KEY_HERE"; // Replace with actual API key
-
 // Create a marker cluster group
 let markers = L.markerClusterGroup({
   spiderfyOnMaxZoom: true,
@@ -20,7 +16,7 @@ let markers = L.markerClusterGroup({
 });
 
 // Weather API configuration (using OpenWeatherMap as an example)
-const WEATHER_API_KEY = "YOUR_API_KEY"; // This should be replaced with an actual API key
+const WEATHER_API_KEY = "YOUR_API_KEY_HERE"; // This should be replaced with an actual API key
 const WEATHER_API_URL = "https://api.openweathermap.org/data/2.5/weather";
 
 let crashData = [];
@@ -84,6 +80,8 @@ function renderMarkers(data) {
         Country: ${crash.Country}<br>
         <div id="weather-info-${crash.Year}-${crash.Location.replace(/\s+/g, '-')}">Loading weather data...</div>
         <button onclick="fetchWeatherData(${crash.Latitude}, ${crash.Longitude}, '${crash.Year}', '${crash.Location.replace(/\s+/g, '-')}')">Load Weather</button>
+        <br><br>
+        <button onclick="showCrashDetails(${JSON.stringify(crash).replace(/"/g, '&quot;')})">View Details</button>
       `);
       
       markers.addLayer(marker);
@@ -425,9 +423,140 @@ function futureEnhancement() {
   // Will implement advanced filtering options
 }
 
+/**
+ * Show detailed crash information panel
+ * @param {Object} crash - Crash data object
+ */
+function showCrashDetails(crash) {
+  // Update panel content with crash data
+  document.getElementById('detail-location').textContent = crash.Location || '-';
+  document.getElementById('detail-year').textContent = crash.Year || '-';
+  document.getElementById('detail-type').textContent = crash.Type || '-';
+  document.getElementById('detail-fatalities').textContent = crash.Fatalities || '0';
+  document.getElementById('detail-country').textContent = crash.Country || '-';
+  document.getElementById('detail-coordinates').textContent = 
+    crash.Latitude && crash.Longitude ? 
+    `${crash.Latitude.toFixed(4)}, ${crash.Longitude.toFixed(4)}` : 
+    '-';
+  
+  // Store current crash for weather loading
+  window.currentCrash = crash;
+  
+  // Show related crashes
+  showRelatedCrashes(crash);
+  
+  // Show the panel
+  document.getElementById('details-panel').style.display = 'flex';
+}
+
+/**
+ * Hide the crash details panel
+ */
+function hideCrashDetails() {
+  document.getElementById('details-panel').style.display = 'none';
+  delete window.currentCrash;
+}
+
+/**
+ * Show related crashes based on country or year
+ * @param {Object} crash - Current crash data object
+ */
+function showRelatedCrashes(crash) {
+  if (!crash || !crashData) return;
+  
+  // Find related crashes (same country or within 5 years)
+  const related = crashData.filter(c => {
+    if (c === crash) return false; // Skip the current crash
+    
+    // Related if same country or within 5 years
+    return (c.Country === crash.Country) || 
+           (c.Year && crash.Year && Math.abs(c.Year - crash.Year) <= 5);
+  });
+  
+  const container = document.getElementById('related-crashes');
+  
+  if (related.length === 0) {
+    container.innerHTML = '<p>No related crashes found.</p>';
+    return;
+  }
+  
+  // Show top 5 related crashes
+  const topRelated = related.slice(0, 5);
+  
+  let html = '<ul style="margin: 0; padding-left: 20px;">';
+  topRelated.forEach(c => {
+    html += `
+      <li>
+        <strong>${c.Location}</strong> (${c.Year}) - 
+        ${c.Fatalities} fatalities
+      </li>`;
+  });
+  html += '</ul>';
+  
+  container.innerHTML = html;
+}
+
+/**
+ * Load weather data for the current crash in the details panel
+ */
+function loadWeatherForCurrentCrash() {
+  if (!window.currentCrash) {
+    alert('No crash selected');
+    return;
+  }
+  
+  const crash = window.currentCrash;
+  const locationId = `${crash.Year}-${crash.Location.replace(/\s+/g, '-')}`;
+  
+  // Update UI to show loading state
+  document.getElementById('detail-weather').textContent = 'Loading...';
+  
+  // Call the existing weather function
+  fetchWeatherData(
+    crash.Latitude, 
+    crash.Longitude, 
+    crash.Year, 
+    locationId
+  ).then(() => {
+    // The fetchWeatherData function updates the popup
+    // We need to also update the details panel
+    setTimeout(() => {
+      const weatherInfoDiv = document.getElementById(`weather-info-${crash.Year}-${locationId.replace(/\s+/g, '-')}`);
+      if (weatherInfoDiv) {
+        // Extract weather info from popup and display in panel
+        const weatherText = weatherInfoDiv.innerHTML;
+        if (weatherText !== 'Weather data unavailable' && weatherText !== 'Loading weather data...') {
+          // Parse the weather data from the popup
+          const tempMatch = weatherText.match(/Temperature: ([^<]+)/);
+          const humidityMatch = weatherText.match(/Humidity: ([^<]+)/);
+          const windMatch = weatherText.match(/Wind Speed: ([^<]+)/);
+          
+          if (tempMatch && humidityMatch && windMatch) {
+            document.getElementById('detail-weather').innerHTML = 
+              `${tempMatch[1]}, ${humidityMatch[1]} humidity, ${windMatch[1]} wind`;
+          } else {
+            document.getElementById('detail-weather').textContent = 'Weather data loaded';
+          }
+        } else {
+          document.getElementById('detail-weather').textContent = weatherText;
+        }
+      }
+    }, 500);
+  }).catch(error => {
+    console.error('Error loading weather data:', error);
+    document.getElementById('detail-weather').textContent = 'Failed to load weather data';
+  });
+}
+
 // 📡 Event listeners for filter buttons
 document.getElementById("applyFilter").addEventListener("click", applyFilters);
 document.getElementById("resetFilter").addEventListener("click", resetFilters);
+
+// Add event listener for close button on details panel
+document.getElementById('close-details').addEventListener('click', hideCrashDetails);
+
+// Add event listener for load weather button
+document.getElementById('load-weather-detail').addEventListener('click', loadWeatherForCurrentCrash);
 
 // 🚀 Initialize the application when page loads
 loadData();
