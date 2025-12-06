@@ -1,6 +1,7 @@
 name: "🚀 Feature Request"
-description: Suggest new flight crash data features
+description: "Suggest new flight crash data features"
 labels: ["feature-request", "triage"]
+
 body:
   - type: markdown
     attributes:
